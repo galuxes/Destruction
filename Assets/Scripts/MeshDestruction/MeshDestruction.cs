@@ -55,11 +55,11 @@ namespace MeshDestruction
         private static TmpMesh MakeCut(ref TmpMesh meshToCut)
         {//TODO:: loop if created piece is too small or create an artificial buffer to prevent that from happening
 
-            //var plane = new Plane(Random.onUnitSphere, new Vector3(Random.Range(meshToCut.bounds.min.x, meshToCut.bounds.max.x), Random.Range(meshToCut.bounds.min.y, meshToCut.bounds.max.y), Random.Range(meshToCut.bounds.min.z, meshToCut.bounds.max.z)));//generate random plane that passes through a random point inside the object
-            var plane = new Plane(Vector3.right,
+            var plane = new Plane(Random.onUnitSphere, new Vector3(Random.Range(meshToCut.bounds.min.x, meshToCut.bounds.max.x), Random.Range(meshToCut.bounds.min.y, meshToCut.bounds.max.y), Random.Range(meshToCut.bounds.min.z, meshToCut.bounds.max.z)));//generate random plane that passes through a random point inside the object
+            /*var plane = new Plane(Vector3.right,
                 new Vector3((meshToCut.bounds.min.x + meshToCut.bounds.max.x) / 2,
                     (meshToCut.bounds.min.y + meshToCut.bounds.max.y) / 2,
-                    (meshToCut.bounds.min.z + meshToCut.bounds.max.z) / 2));
+                    (meshToCut.bounds.min.z + meshToCut.bounds.max.z) / 2));*/
             
             TmpMesh newMesh = new TmpMesh();//new piece to be created made up of everything on pos side of plane
             TmpMesh replacementMesh = new TmpMesh();//updated version of the cut piece
@@ -119,7 +119,7 @@ namespace MeshDestruction
                         continue;
                     }
 
-                    int vertIndex = sideA ? 0 : sideB ? 1 : 2; //calc vert index based off of which vert is on pos side
+                    int vertIndex = sideA == sideB ? 2 : sideA == sideC ? 1 : 0; //calc vert index based off of which vert is isolated
 
                     var triangle1 = new Triangle // triangle for side with 1 vert
                     {
@@ -178,10 +178,13 @@ namespace MeshDestruction
                     
                     for (int i = 1; i < 3; i++)
                     {
-                        var v = meshToCut.vertList[submesh[index2 + ((vertIndex + i) % 3)]] - meshToCut.vertList[submesh[index2 + vertIndex]];
+                        var pos1 = meshToCut.vertList[submesh[index2 + ((vertIndex + i) % 3)]];
+                        var pos2 = meshToCut.vertList[submesh[index2 + vertIndex]];
+                        var v = pos1 - pos2;
                         Ray ray = new Ray(meshToCut.vertList[submesh[index2 + vertIndex]], v);
+                        Vector3 newVert;
                         plane.Raycast(ray, out var enter);
-                        var newVert = ray.GetPoint(enter); //new vert pos
+                        newVert = ray.GetPoint(enter); //new vert pos
 
                         var magnitude = v.magnitude;
 
@@ -316,7 +319,7 @@ namespace MeshDestruction
             };
             for(var i = 0; i < tmpMesh.triList.Count; i++)
                 mesh.SetTriangles(tmpMesh.triList[i], i, true);
-            tmpMesh.bounds = tmpMesh.bounds;
+            mesh.bounds = tmpMesh.bounds;
             
             return mesh;
         }
