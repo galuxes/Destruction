@@ -48,7 +48,8 @@ namespace MeshDestruction
             var list = new List<GameObject>();
             foreach (var tmpMesh in tmpMeshes)
             {
-                list.Add(GenerateGameObject(original, tmpMesh));
+                if (tmpMesh.triList.Count > 0 && tmpMesh.triList[0].Count >= 3)
+                    list.Add(GenerateGameObject(original, tmpMesh));
             }
             return list;
         }
@@ -64,9 +65,9 @@ namespace MeshDestruction
             TmpMesh newMesh = new TmpMesh();//new piece to be created made up of everything on pos side of plane
             TmpMesh replacementMesh = new TmpMesh();//updated version of the cut piece
 
-            /*Vector3? interiorFaceReferenceVert = null;
+            Vector3? interiorFaceReferenceVert = null;
             Vector3? interiorFaceReferenceNorm = null;
-            Vector2? interiorFaceReferenceUV = null;*/
+            Vector2? interiorFaceReferenceUV = null;
 
             for (var index1 = 0; index1 < meshToCut.triList.Count; index1++)
             {
@@ -166,15 +167,17 @@ namespace MeshDestruction
                         //uv3 = meshToCut.UVList[tri + 2]
                     };
 
-                    //Triangle interiorFaceTriangle = new Triangle();
-                    /*
+                    Triangle interiorFaceTriangle = new Triangle();
+                    bool referenceVertStored = false;
+                    
                     if (interiorFaceReferenceVert.HasValue)
                     {
+                        referenceVertStored = true;
                         interiorFaceTriangle.vert1 = interiorFaceReferenceVert.Value;
                         interiorFaceTriangle.norm1 = interiorFaceReferenceNorm.Value;
                         interiorFaceTriangle.uv1 = interiorFaceReferenceUV.Value;
                     }
-                    */
+                    
                     
                     for (int i = 1; i < 3; i++)
                     {
@@ -209,12 +212,21 @@ namespace MeshDestruction
                             triangle2.norm1 = newNorm;
                             triangle2.uv1 = newUV;
 
-                            /*if (interiorFaceReferenceNorm.HasValue)
+                            if (referenceVertStored)
                             {
-                                interiorFaceTriangle.vert2 = newVert;
-                                interiorFaceTriangle.norm2 = newNorm;
-                                interiorFaceTriangle.uv2 = newUV;
-                            }*/
+                                if (plane.GetSide(meshToCut.vertList[submesh[index2 + vertIndex]]))
+                                {
+                                    interiorFaceTriangle.vert3 = newVert;
+                                    interiorFaceTriangle.norm3 = plane.normal;
+                                    interiorFaceTriangle.uv3 = newUV;
+                                }
+                                else
+                                {
+                                    interiorFaceTriangle.vert2 = newVert;
+                                    interiorFaceTriangle.norm2 = plane.normal;
+                                    interiorFaceTriangle.uv2 = newUV;
+                                }
+                            }
                         }
                         else
                         {
@@ -226,20 +238,44 @@ namespace MeshDestruction
                             triangle3.norm3 = newNorm;
                             triangle3.uv3 = newUV;
                             
-                            /*if (interiorFaceReferenceNorm.HasValue)
+                            if (referenceVertStored)
                             {
-                                interiorFaceTriangle.vert3 = newVert;
-                                interiorFaceTriangle.norm3 = newNorm;
-                                interiorFaceTriangle.uv3 = newUV;
-                            }*/
+                                if (!plane.GetSide(meshToCut.vertList[submesh[index2 + vertIndex]]))
+                                {
+                                    interiorFaceTriangle.vert3 = newVert;
+                                    interiorFaceTriangle.norm3 = plane.normal;
+                                    interiorFaceTriangle.uv3 = newUV;
+                                }
+                                else
+                                {
+                                    interiorFaceTriangle.vert2 = newVert;
+                                    interiorFaceTriangle.norm2 = plane.normal;
+                                    interiorFaceTriangle.uv2 = newUV;
+                                }
+                            }
                         }
                         
-                        /*if (!interiorFaceReferenceNorm.HasValue)
+                        if (!referenceVertStored)
                         {
                             interiorFaceReferenceVert = newVert;
-                            interiorFaceReferenceNorm = newNorm;
+                            interiorFaceReferenceNorm = plane.normal;
                             interiorFaceReferenceUV = newUV;
-                        }*/
+                        }
+                    }
+                    
+                    if (referenceVertStored)
+                    {
+                        AddTriangle(ref newMesh, interiorFaceTriangle, index1);
+                        var tmpVert = interiorFaceTriangle.vert2;
+                        var tmpNorm = interiorFaceTriangle.norm2;
+                        var tmpUV = interiorFaceTriangle.uv2;
+                        interiorFaceTriangle.vert2 = interiorFaceTriangle.vert3;
+                        interiorFaceTriangle.norm2 = interiorFaceTriangle.norm3;
+                        interiorFaceTriangle.uv2 = interiorFaceTriangle.uv3;
+                        interiorFaceTriangle.vert3 = tmpVert;
+                        interiorFaceTriangle.norm3 = tmpNorm;
+                        interiorFaceTriangle.uv3 = tmpUV;
+                        AddTriangle(ref replacementMesh, interiorFaceTriangle, index1);
                     }
 
                     if (sideCount == 1) //one vert on positive side of plane
@@ -261,12 +297,6 @@ namespace MeshDestruction
 
                         AddTriangle(ref newMesh, triangle3, index1);
                     }
-
-                    /*if (interiorFaceReferenceNorm.HasValue)
-                    {
-                        AddTriangle(ref newMesh, interiorFaceTriangle, index1);
-                        AddTriangle(ref replacementMesh, interiorFaceTriangle, index1);
-                    }*/
                 }
             }
 
@@ -289,7 +319,8 @@ namespace MeshDestruction
 
             obj.AddComponent<MeshRenderer>().materials = original.GetComponent<MeshRenderer>().materials;
             
-            obj.AddComponent<MeshCollider>().convex = true;
+            if(obj.transform.localScale.magnitude > 0)
+                obj.AddComponent<MeshCollider>().convex = true;
             
             return obj;
         }
@@ -320,7 +351,7 @@ namespace MeshDestruction
             for(var i = 0; i < tmpMesh.triList.Count; i++)
                 mesh.SetTriangles(tmpMesh.triList[i], i, true);
             mesh.bounds = tmpMesh.bounds;
-            
+
             return mesh;
         }
         private static void AddTriangle( ref TmpMesh tmpMesh, Triangle tri, int submesh)
@@ -343,10 +374,5 @@ namespace MeshDestruction
             tmpMesh.UVList.Add(tri.uv2);
             tmpMesh.UVList.Add(tri.uv3);
         }
-        /*private static Mesh CopyOriginalMesh(Destructable original)//temporary just for testing
-        {
-            var mesh = original.GetComponent<MeshFilter>().mesh;
-            return mesh;
-        }*/
     }
 }

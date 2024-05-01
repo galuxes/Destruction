@@ -9,15 +9,16 @@ public class Destructable : MonoBehaviour
     [SerializeField] private int numPieces;
     [SerializeField] private int numGenerations;
 
-    private void OnMouseDown()
+    private void OnCollisionEnter(Collision other)
     {
-        RaycastHit hit;
-        if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out hit))
+        //RaycastHit hit;
+        //if (Physics.Raycast(Camera.main.ScreenPointToRay(Input.mousePosition), out hit))
+        if(other.gameObject.CompareTag("Ball"))
         {
             //Debug.Log(hit.point);//world space point
             //Debug.Log(transform.worldToLocalMatrix * hit.point);//local point
 
-            var objs = MeshDestruction.MeshDestruction.DestroyMesh(transform, hit.point, numPieces);
+            var objs = MeshDestruction.MeshDestruction.DestroyMesh(transform, other.transform.position, numPieces);
 
             foreach (var obj in objs)
             {
@@ -30,12 +31,9 @@ public class Destructable : MonoBehaviour
                 }
 
                 var rb = obj.AddComponent<Rigidbody>();
-                rb.velocity = (obj.transform.position - transform.position).normalized * force;
-                //Instantiate(obj);
+                rb.AddForce((obj.GetComponent<MeshFilter>().mesh.bounds.center - other.transform.position) * force, ForceMode.Impulse);
             }
             Destroy(gameObject);
-            //var obj = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            //obj.transform.position = hit.point;
         }
         else
         {
