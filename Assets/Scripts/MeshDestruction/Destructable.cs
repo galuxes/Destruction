@@ -37,7 +37,7 @@ public class Destructable : MonoBehaviour
         }
         else
         {
-            Debug.Log("Didn't find Collision?");
+            //Debug.Log("Didn't find Collision?");
         }
     }
 }
